@@ -36,6 +36,10 @@ float lastFrame = 0.0f;
 //should be equal to planet pos
 glm::vec3 lightPos(0.0f, 0.0f, 0.0f);
 
+//pause button and game time accumulator 
+bool paused = false;
+float animationTime = 0.0f;
+
 int main()
 {
     // glfw: initialize and configure
@@ -237,6 +241,14 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+        //if (paused)
+           // deltaTime = 0.0f;
+
+        //animationTime += deltaTime;
+
+        if (!paused)
+            animationTime += deltaTime;
+
         // input
         // -----
         processInput(window);
@@ -283,8 +295,8 @@ int main()
 
         //circular motion
         float radius = 5.0f;
-        float planetX = sin(glfwGetTime()) * radius;
-        float planetZ = cos(glfwGetTime()) * radius;
+        float planetX = sin(animationTime) * radius;
+        float planetZ = cos(animationTime) * radius;
 
         lightPos = glm::vec3(planetX, 0.0f, planetZ);
         ourShadercubes.use();
@@ -296,7 +308,7 @@ int main()
         modelplanet = glm::translate(modelplanet, glm::vec3(planetX, 0.0f, planetZ));
 
         //rotate around itself, not required
-        //modelplanet = glm::rotate(modelplanet,(float)glfwGetTime(),glm::vec3(0.0f, 1.0f, 0.0f));
+        //modelplanet = glm::rotate(modelplanet,(float)animationTime,glm::vec3(0.0f, 1.0f, 0.0f));
 
         modelplanet = glm::scale(modelplanet, glm::vec3(1.0f, 1.0f, 1.0f));    // it's a bit too big for our scene, so scale it down
         ourShaderplanet.setMat4("model", modelplanet);
@@ -324,8 +336,9 @@ int main()
         // create transformations
         //tranform makes them rotate around some axis (the sphere), angle is "speed" and the vector is the axis of rotation 
         glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+        //I think I forgot to make that axis the planet position 
         transform = glm::translate(transform, glm::vec3(0.5f, -0.5f, 0.0f));
-        transform = glm::rotate(transform, 0.5f *(float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
+        transform = glm::rotate(transform, 0.5f *(float)animationTime, glm::vec3(0.0f, 1.0f, 0.0f));
 
         // get matrix's uniform location and set matrix
         ourShadercubes.use();
@@ -344,13 +357,16 @@ int main()
             modelcubes = glm::translate(modelcubes, cubePositions[i]);
             //modelcubes = glm::translate(modelcubes, lightPos); //so the center of the (now moving) sphere is the axis of rotation
             modelcubes = glm::rotate(modelcubes,
-                (float)glfwGetTime() ,
+                (float)animationTime,
                 glm::vec3(0.0f, 1.0f, 0.0f));
-            modelcubes = glm::translate(modelcubes, cubePositions[i]);
+            //modelcubes = glm::translate(modelcubes, cubePositions[i]);
+           //pretty sure I accidentally translated twice which led to the cubes being far away from the center
 
 
-            float angle = 10.0f * (1+i) * (float)glfwGetTime();
-            //this is the self rotation 
+            //float angle = 10.0f * (1+i) * (float)glfwGetTime();
+            //anywhere there is animationTime, I had glfwGetTime and I changed it for the pause button
+            float angle = 10.0f * (1 + i) * (float)animationTime;
+            //this is the self rotation , set multiplier to something like 100 instead of 10 to prove each cube has different self rotation
             modelcubes = glm::rotate(modelcubes, glm::radians(angle), glm::vec3(0.3f, 1.0f, 0.5f));
             ourShadercubes.setMat4("modelcubes", modelcubes);
             ourShadercubes.setMat4("transform", transform);
@@ -390,6 +406,26 @@ void processInput(GLFWwindow *window)
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    //if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+        //if (paused == false) {
+         //   paused = true;
+        //}
+        //else {
+
+          //  paused = false;
+      //  }
+    //}
+    static bool pPressedLastFrame = false;
+
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !pPressedLastFrame)
+    {
+        paused = !paused;   // toggle properly
+        pPressedLastFrame = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE)
+    {
+        pPressedLastFrame = false;
+    }
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
